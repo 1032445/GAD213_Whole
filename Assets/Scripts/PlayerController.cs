@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    [Header ("Movement")]
+    [Header("Movement")]
     public float speed = 5f;
     public float jumpForce = 5f;
     public float fallMultiplier = 2.5f;
@@ -23,7 +23,7 @@ public class PlayerController : MonoBehaviour
     public float sprintSpeed = 10f;
     public KeyCode sprintKey = KeyCode.LeftShift;
 
-    [Header ("Camera")]
+    [Header("Camera")]
     public Transform cameraTransform;
     public float mouseSensitivity = 500f;
 
@@ -35,6 +35,7 @@ public class PlayerController : MonoBehaviour
     public LayerMask pickupLayer;
     public KeyCode pickupKey = KeyCode.E;
     private Rigidbody heldObject;
+    public Hint pickupHint;
 
     [Header("Ground Check")]
     public Transform groundCheck;
@@ -64,6 +65,8 @@ public class PlayerController : MonoBehaviour
         transform.Rotate(Vector3.up * mouseX);
 
 
+
+
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
 
@@ -76,7 +79,7 @@ public class PlayerController : MonoBehaviour
         velocity.y = rb.velocity.y;
         rb.velocity = velocity;
 
-  
+
         if (Input.GetButtonDown("Jump") && IsGrounded())
         {
             rb.velocity = new Vector3(rb.velocity.x, jumpForce, rb.velocity.z);
@@ -128,6 +131,20 @@ public class PlayerController : MonoBehaviour
             heldObject.position = Vector3.Lerp(heldObject.position, targetPosition, holdSmooth * Time.deltaTime);
             heldObject.rotation = Quaternion.identity;
         }
+
+        if (pickupHint != null)
+        {
+            Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+            if (Physics.Raycast(ray, out RaycastHit hit, pickupRange))
+            {
+                if (hit.collider.CompareTag("Pickup"))
+                    pickupHint.Show();
+                else
+                    pickupHint.Hide();
+            }
+            else
+                pickupHint.Hide();
+        }
     }
 
     bool IsGrounded()
@@ -153,12 +170,12 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-        void Drop()
+    void Drop()
     {
         if (heldObject != null)
         {
             heldObject.useGravity = true;
-            heldObject.constraints = RigidbodyConstraints.None; // restore rotation
+            heldObject.constraints = RigidbodyConstraints.None;
             heldObject = null;
         }
     }
