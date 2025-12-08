@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 public class Flashlight : MonoBehaviour
 {
+    [Header("Flashlight Basics")]
     public Light flashlightLight;
     public KeyCode toggleKey = KeyCode.F;
     public float maxBattery = 100f;
@@ -12,6 +13,11 @@ public class Flashlight : MonoBehaviour
     public bool isOn = false;
     private float currentBattery;
     public Slider batterySlider;
+
+    [Header("Combat")]
+    public float range = 10f;
+    public float angle = 35f;
+    public float damagePerSecond = 1f;
 
     void Start()
     {
@@ -41,6 +47,8 @@ public class Flashlight : MonoBehaviour
                 isOn = false;
                 flashlightLight.enabled = false;
             }
+
+            ApplyLightDamage();
         }
 
         // Update UI
@@ -52,5 +60,32 @@ public class Flashlight : MonoBehaviour
     public float BatteryPercent()
     {
         return currentBattery / maxBattery;
+    }
+
+    public void ApplyLightDamage()
+    {
+        Collider[] hits = Physics.OverlapSphere(transform.position, range);
+
+        foreach (var hit in hits)
+        {
+            if (hit.TryGetComponent(out LightEnemy enemy))
+            {
+                // Vector to enemy
+                Vector3 dir = (hit.transform.position - transform.position).normalized;
+
+                // Check angle
+                float dot = Vector3.Dot(transform.forward, dir);
+                if (dot < Mathf.Cos(angle * Mathf.Deg2Rad))
+                    continue;
+
+                // Check distance
+                float dist = Vector3.Distance(transform.position, hit.transform.position);
+                if (dist > range)
+                    continue;
+
+                // Apply damage
+                enemy.TakeLightDamage(damagePerSecond * Time.deltaTime);
+            }
+        }
     }
 }
