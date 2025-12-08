@@ -17,6 +17,7 @@ public class LightEnemy : MonoBehaviour
 
     private float knockbackTimer = 0f;
     private Vector3 knockbackDirection;
+    private bool isDead = false;
 
     void Start()
     {
@@ -39,6 +40,9 @@ public class LightEnemy : MonoBehaviour
 
     public void TakeLightDamage(float amount)
     {
+        if (isDead)
+            return; // prevent hit sounds + knockback after death
+
         currentHealth -= amount;
 
         if (audioHandler != null)
@@ -65,17 +69,15 @@ public class LightEnemy : MonoBehaviour
 
     void Die()
     {
+        isDead = true;
+
         if (audioHandler != null && audioHandler.deathClip != null)
             audioHandler.PlayDeath();
 
         BatDeath death = GetComponent<BatDeath>();
         if (death != null)
-        {
             death.StartDeath();
-        }
         else
-        {
-            Destroy(gameObject); // fallback
-        }
+            Destroy(gameObject);
     }
 }

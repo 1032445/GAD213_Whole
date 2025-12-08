@@ -52,7 +52,7 @@ public class BatEnemy : MonoBehaviour
         float hover = Mathf.Sin(Time.time * hoverFrequency) * hoverAmplitude;
 
         Vector3 pos = transform.position;
-        pos.y = targetY + hover;
+        pos.y = Mathf.Lerp(pos.y, targetY, Time.deltaTime * 0.5f) + hover;
         transform.position = pos;
     }
 }

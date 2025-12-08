@@ -7,30 +7,44 @@ public class BatAudio : MonoBehaviour
     public AudioSource audioSource;
 
     [Header("Clips")]
-    public AudioClip idleLoop;       // flapping / ambient loop
-    public AudioClip screechClip;    // when spawned or aggro
-    public AudioClip hitClip;        // when damaged by light
-    public AudioClip deathClip;      // on death
+    public AudioClip idleLoop;
+    public AudioClip screechClip;
+    public AudioClip hitClip;
+    public AudioClip deathClip;
 
-    [Header("Settings")]
+    [Header("Volumes")]
     public float idleVolume = 0.4f;
     public float screechVolume = 1f;
     public float hitVolume = 0.7f;
     public float deathVolume = 1f;
 
+    [Header("Cooldowns")]
+    public float hitCooldown = 0.12f;
+    private float hitCooldownTimer = 0f;
+
     void Start()
     {
-        // Start idle loop
+        audioSource.loop = false;
+        audioSource.ignoreListenerVolume = false;
+        audioSource.ignoreListenerPause = false;
+
+        // start idle loop
         if (idleLoop != null)
         {
             audioSource.clip = idleLoop;
-            audioSource.loop = true;
             audioSource.volume = idleVolume;
+            audioSource.loop = true;
             audioSource.Play();
         }
 
-        // Screech on spawn
+        // screech once on spawn
         PlayScreech();
+    }
+
+    void Update()
+    {
+        if (hitCooldownTimer > 0)
+            hitCooldownTimer -= Time.deltaTime;
     }
 
     public void PlayScreech()
@@ -41,12 +55,20 @@ public class BatAudio : MonoBehaviour
 
     public void PlayHit()
     {
+        if (hitCooldownTimer > 0)
+            return;
+
+        hitCooldownTimer = hitCooldown;
+
         if (hitClip != null)
             audioSource.PlayOneShot(hitClip, hitVolume);
     }
 
     public void PlayDeath()
     {
+        // stop idle loop so the death is clean
+        audioSource.Stop();
+
         if (deathClip != null)
             audioSource.PlayOneShot(deathClip, deathVolume);
     }
