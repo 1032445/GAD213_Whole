@@ -11,6 +11,7 @@ public class BatEnemy : MonoBehaviour
 
     public float hoverAmplitude = 0.25f;
     public float hoverFrequency = 3f;
+    public float heightOffset = 0.5f;
 
     public float modelRotationOffset = 0f;
 
@@ -26,9 +27,10 @@ public class BatEnemy : MonoBehaviour
         if (player == null)
             return;
 
-        // Horizontal look direction
+        // face the player
         Vector3 lookPos = player.position - transform.position;
-        lookPos.y = 0f;
+        float horizontalDist = new Vector2(lookPos.x, lookPos.z).magnitude;
+        lookPos.y = 0f; // keep rotation horizontal
 
         if (lookPos.sqrMagnitude > 0.01f)
         {
@@ -38,18 +40,19 @@ public class BatEnemy : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotationSpeed * Time.deltaTime);
         }
 
-        float dist = lookPos.magnitude;
-
-        // Move if not close enough
-        if (dist > stopDistance)
+        // move towards player
+        if (horizontalDist > stopDistance)
         {
-            transform.position += lookPos.normalized * moveSpeed * Time.deltaTime;
+            Vector3 moveDir = new Vector3(lookPos.x, 0f, lookPos.z).normalized;
+            transform.position += moveDir * moveSpeed * Time.deltaTime;
         }
 
-        // Hover effect
+        // hover based on player height
+        float targetY = player.position.y + heightOffset;
         float hover = Mathf.Sin(Time.time * hoverFrequency) * hoverAmplitude;
+
         Vector3 pos = transform.position;
-        pos.y = baseY + hover;
+        pos.y = targetY + hover;
         transform.position = pos;
     }
 }
