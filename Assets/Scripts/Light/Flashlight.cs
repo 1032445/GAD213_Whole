@@ -9,10 +9,14 @@ public class Flashlight : MonoBehaviour
     public Light flashlightLight;
     public KeyCode toggleKey = KeyCode.F;
     public float maxBattery = 100f;
-    public float batteryDrainRate = 5f;
     public bool isOn = false;
     private float currentBattery;
     public Slider batterySlider;
+
+    [Header("Drain Rates")]
+    public float idleDrainRate = 0.1f;
+    public float combatDrainRate = 1f;
+    private bool isDealingDamage = false;
 
     [Header("Combat")]
     public float range = 10f;
@@ -32,13 +36,22 @@ public class Flashlight : MonoBehaviour
 
     [Header("Cone Flicker")]
     [Range(0f, 1f)]
-    public float conePercent = 0.9f; // shrink cone to 90% on hit
+    public float conePercent = 0.9f;
     public float coneRecoverSpeed = 100f;
 
     private float originalConeAngle;
-
-    private Vector3 originalLocalPos;
     private float originalIntensity;
+    private Vector3 originalLocalPos;
+
+    [Header("Battery Behaviour")]
+    public float lowBatteryPercent = 0.30f;
+    public float criticalBatteryPercent = 0.10f;
+
+    public float lowIntensityMultiplier = 0.6f;
+    public float criticalIntensityMultiplier = 0.2f;
+
+    public float lowConeMultiplier = 0.7f;
+    public float criticalConeMultiplier = 0.3f;
 
     void Start()
     {
@@ -59,19 +72,17 @@ public class Flashlight : MonoBehaviour
         HandleBatteryDrain();
 
         if (isOn)
-        {
             ApplyLightDamage();
-        }
 
         HandleShake();
         HandleFlicker();
+        HandleBatteryStateEffects();
 
         if (batterySlider != null)
             batterySlider.value = BatteryPercent();
     }
 
-
-    // light toggle
+    // toggle
     void HandleToggle()
     {
         if (Input.GetKeyDown(toggleKey) && currentBattery > 0)
@@ -81,7 +92,6 @@ public class Flashlight : MonoBehaviour
 
             if (!isOn)
             {
-                // reset visuals
                 transform.localPosition = originalLocalPos;
                 flashlightLight.intensity = originalIntensity;
             }
@@ -89,19 +99,19 @@ public class Flashlight : MonoBehaviour
     }
 
 
-    // battery
+    // battery drain
     void HandleBatteryDrain()
     {
         if (!isOn) return;
 
-        currentBattery -= batteryDrainRate * Time.deltaTime;
+        float drainRate = isDealingDamage ? combatDrainRate : idleDrainRate;
 
-        if (currentBattery <= 0)
-        {
-            currentBattery = 0;
-            isOn = false;
-            flashlightLight.enabled = false;
-        }
+        currentBattery -= drainRate * Time.deltaTime;
+
+        // enforce minimum brightness
+        float criticalMin = maxBattery * criticalBatteryPercent;
+        if (currentBattery < criticalMin)
+            currentBattery = criticalMin;
     }
 
     public float BatteryPercent()
@@ -109,10 +119,11 @@ public class Flashlight : MonoBehaviour
         return currentBattery / maxBattery;
     }
 
-
-    // damage and feedback triggers
+    // damage & hit feedback
     public void ApplyLightDamage()
     {
+        isDealingDamage = false; // reset
+
         Collider[] hits = Physics.OverlapSphere(transform.position, range);
 
         foreach (var hit in hits)
@@ -124,10 +135,12 @@ public class Flashlight : MonoBehaviour
 
                 if (dot > Mathf.Cos(angle * Mathf.Deg2Rad))
                 {
-                    // apply Damage
+                    // damaging enemy
+                    isDealingDamage = true;
+
                     enemy.TakeLightDamage(damagePerSecond * Time.deltaTime);
 
-                    // trigger shake + flicker
+                    // hit feedback
                     shakeTimer = 0.1f;
                     flicker = true;
                 }
@@ -136,7 +149,7 @@ public class Flashlight : MonoBehaviour
     }
 
 
-    // shake effect
+    // light shake
     void HandleShake()
     {
         if (shakeTimer > 0)
@@ -144,7 +157,7 @@ public class Flashlight : MonoBehaviour
             shakeTimer -= Time.deltaTime;
 
             transform.localPosition = originalLocalPos +
-                Random.insideUnitSphere * shakeAmount;
+                                      Random.insideUnitSphere * shakeAmount;
         }
         else
         {
@@ -156,50 +169,93 @@ public class Flashlight : MonoBehaviour
         }
     }
 
+
     // flicker
     void HandleFlicker()
     {
         if (!isOn) return;
 
-        // percentage targets
         float targetIntensity = originalIntensity * flickerPercent;
         float targetCone = originalConeAngle * conePercent;
 
         if (flicker)
         {
-            // flicker brightness
             flashlightLight.intensity = Mathf.Lerp(
                 flashlightLight.intensity,
                 targetIntensity,
                 Time.deltaTime * flickerRecoverSpeed
             );
 
-            // shrink cone
             flashlightLight.spotAngle = Mathf.Lerp(
                 flashlightLight.spotAngle,
                 targetCone,
                 Time.deltaTime * coneRecoverSpeed
             );
 
-            // stop flicker once close enough
             if (Mathf.Abs(flashlightLight.intensity - targetIntensity) < 0.05f)
                 flicker = false;
         }
         else
         {
-            // recover brightness
             flashlightLight.intensity = Mathf.Lerp(
                 flashlightLight.intensity,
                 originalIntensity,
                 Time.deltaTime * 5f
             );
 
-            // recover cone
             flashlightLight.spotAngle = Mathf.Lerp(
                 flashlightLight.spotAngle,
                 originalConeAngle,
                 Time.deltaTime * 10f
             );
         }
+    }
+
+    // low battery behaviour
+
+    void HandleBatteryStateEffects()
+    {
+        if (!isOn) return;
+
+        float batteryRatio = currentBattery / maxBattery;
+
+        // normal (above low)
+        if (batteryRatio > lowBatteryPercent)
+        {
+            return;
+        }
+
+        if (batteryRatio > criticalBatteryPercent)
+        {
+            // unstable flicker
+            flashlightLight.intensity = Mathf.Lerp(
+                flashlightLight.intensity,
+                originalIntensity * lowIntensityMultiplier,
+                Time.deltaTime * 2f
+            );
+
+            flashlightLight.spotAngle = Mathf.Lerp(
+                flashlightLight.spotAngle,
+                originalConeAngle * lowConeMultiplier,
+                Time.deltaTime * 2f
+            );
+
+            return;
+        }
+
+
+        // critical battery
+
+        flashlightLight.intensity = Mathf.Lerp(
+            flashlightLight.intensity,
+            originalIntensity * criticalIntensityMultiplier,
+            Time.deltaTime * 5f
+        );
+
+        flashlightLight.spotAngle = Mathf.Lerp(
+            flashlightLight.spotAngle,
+            originalConeAngle * criticalConeMultiplier,
+            Time.deltaTime * 5f
+        );
     }
 }

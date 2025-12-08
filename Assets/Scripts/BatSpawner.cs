@@ -57,7 +57,6 @@ public class BatSpawner : MonoBehaviour
         }
         else
         {
-            // random position around player
             Vector3 randomOffset = Random.insideUnitSphere * 10f;
             randomOffset.y = Mathf.Abs(randomOffset.y) + 1f;
             spawnPos = new GameObject("TempSpawn").transform;
@@ -66,13 +65,18 @@ public class BatSpawner : MonoBehaviour
 
         GameObject bat = Instantiate(batPrefab, spawnPos.position, Quaternion.identity);
 
+        // assign player to all enemy scripts
         BatEnemy batEnemy = bat.GetComponent<BatEnemy>();
         if (batEnemy != null)
             batEnemy.player = player;
 
+        EnemyDamage dmg = bat.GetComponent<EnemyDamage>();
+        if (dmg != null)
+            dmg.player = player;
+
+        // track deletion
         StartCoroutine(TrackExitOnDeath(bat));
 
-        // clean temp spawn point
         if (!useSpawnPoints)
             Destroy(spawnPos.gameObject);
 
