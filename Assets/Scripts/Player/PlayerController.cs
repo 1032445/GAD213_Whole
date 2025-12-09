@@ -34,7 +34,7 @@ public class PlayerController : MonoBehaviour
     public float pickupRange = 3f;
     public LayerMask pickupLayer;
     public KeyCode pickupKey = KeyCode.E;
-    private Rigidbody heldObject;
+    public Rigidbody heldObject;
     public Hint pickupHint;
 
     [Header("Ground Check")]
@@ -49,12 +49,19 @@ public class PlayerController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         capsuleCollider = GetComponent<CapsuleCollider>();
+
         Cursor.lockState = CursorLockMode.Locked;
+
+        isCrouching = false;
+        capsuleCollider.height = standHeight;
+
+        cameraTransform.localPosition = new Vector3(cameraTransform.localPosition.x, standHeight * 0.5f, cameraTransform.localPosition.z);
     }
 
     void Update()
     {
-
+        if (Time.time < 0.1f)
+            return; // ignore camera look on first frame
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
@@ -130,20 +137,6 @@ public class PlayerController : MonoBehaviour
             Vector3 targetPosition = cameraTransform.position + cameraTransform.forward * holdDistance;
             heldObject.position = Vector3.Lerp(heldObject.position, targetPosition, holdSmooth * Time.deltaTime);
             heldObject.rotation = Quaternion.identity;
-        }
-
-        if (pickupHint != null)
-        {
-            Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
-            if (Physics.Raycast(ray, out RaycastHit hit, pickupRange))
-            {
-                if (hit.collider.CompareTag("Pickup"))
-                    pickupHint.Show();
-                else
-                    pickupHint.Hide();
-            }
-            else
-                pickupHint.Hide();
         }
     }
 

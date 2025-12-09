@@ -6,49 +6,53 @@ using TMPro;
 public class Hint : MonoBehaviour
 {
     public TextMeshProUGUI hintText;
-    public float detectionRadius = 3f;
+    public float maxDistance = 3f;
 
-    private Transform player;
+    private Transform playerCamera;
+    private PlayerController player;
 
-    private void Start()
+    void Start()
     {
         hintText.enabled = false;
 
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
-            player = playerObj.transform;
+        {
+            player = playerObj.GetComponent<PlayerController>();
+            playerCamera = player.cameraTransform;
+        }
         else
-            Debug.LogError("Player not found");
+            Debug.LogError("Player not found!");
     }
 
-    private void Update()
+    void Update()
     {
-        if (player == null)
+        if (playerCamera == null)
             return;
 
-        // check for pickups near player
-        Collider[] hits = Physics.OverlapSphere(player.position, detectionRadius);
-
-        bool foundPickup = false;
-
-        foreach (Collider hit in hits)
+        if (player.heldObject != null)
         {
-            if (hit.CompareTag("Pickup"))
+            Show("Press E again to drop");
+            return;
+        }
+
+        Ray ray = new Ray(playerCamera.position, playerCamera.forward);
+
+        if (Physics.Raycast(ray, out RaycastHit hit, maxDistance))
+        {
+            if (hit.collider.CompareTag("Pickup"))
             {
-                foundPickup = true;
-                break;
+                Show("Press E to pick up");
+                return;
             }
         }
 
-        if (foundPickup)
-            Show("Press E to pick up");
-        else
-            Hide();
+        Hide();
     }
 
-    public void Show(string message = "Press E to pick up")
+    public void Show(string msg)
     {
-        hintText.text = message;
+        hintText.text = msg;
         hintText.enabled = true;
     }
 
