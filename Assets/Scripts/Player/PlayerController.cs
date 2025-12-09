@@ -325,10 +325,10 @@ public class PlayerController : MonoBehaviour
         Vector3 flatVel = new Vector3(rb.velocity.x, 0, rb.velocity.z);
         float moveSpeed = flatVel.magnitude;
 
-        // silent if crouching or not moving
-        if (isCrouching || moveSpeed < 0.1f)
+        // no footsteps when crouching or standing still
+        if (isCrouching || moveSpeed < 0.2f)
         {
-            stepTimer = 0f;
+            stepTimer = 0.1f; // small delay
             return;
         }
 
@@ -337,20 +337,13 @@ public class PlayerController : MonoBehaviour
         float interval = isSprinting ? sprintInterval : walkInterval;
         AudioClip clip = isSprinting ? sprintClip : walkClip;
 
-        if (stepTimer == 0f)
+        // countdown
+        stepTimer -= Time.deltaTime;
+
+        if (stepTimer <= 0f)
         {
             footstepSource.PlayOneShot(clip);
-            stepTimer = 0.001f; // prevent repeating instantly each frame
-            return;
-        }
-
-        // continuous steps
-        stepTimer += Time.deltaTime;
-
-        if (stepTimer >= interval)
-        {
-            stepTimer = 0.001f;
-            footstepSource.PlayOneShot(clip);
+            stepTimer = interval; // reset proper interval
         }
     }
 
