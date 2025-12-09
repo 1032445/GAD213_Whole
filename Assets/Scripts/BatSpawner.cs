@@ -44,7 +44,7 @@ public class BatSpawner : MonoBehaviour
         }
     }
 
-    private void SpawnBat()
+    public void SpawnBat()
     {
         if (batPrefab == null || player == null)
             return;
@@ -81,6 +81,12 @@ public class BatSpawner : MonoBehaviour
             Destroy(spawnPos.gameObject);
 
         currentActiveBats++;
+    }
+
+    public void SpawnBats(int amount)
+    {
+        for (int i = 0; i < amount; i++)
+            SpawnBat();
     }
 
     IEnumerator TrackExitOnDeath(GameObject bat)

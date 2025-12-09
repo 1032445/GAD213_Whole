@@ -26,6 +26,8 @@ public class TimedLever : MonoBehaviour
     private Quaternion startRotation;
     private Quaternion onRotation;
 
+    public BatSpawner spawner;
+
     void Start()
     {
         startRotation = pivotPoint.localRotation;

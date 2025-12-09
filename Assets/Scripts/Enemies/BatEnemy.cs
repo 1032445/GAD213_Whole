@@ -15,44 +15,45 @@ public class BatEnemy : MonoBehaviour
 
     public float modelRotationOffset = 0f;
 
-    private float baseY;
+    private Rigidbody rb;
 
-    void Start()
+    void Awake()
     {
-        baseY = transform.position.y;
+        rb = GetComponent<Rigidbody>();
     }
 
-    void Update()
+    void FixedUpdate()
     {
         if (player == null)
             return;
 
-        // face the player
-        Vector3 lookPos = player.position - transform.position;
-        float horizontalDist = new Vector2(lookPos.x, lookPos.z).magnitude;
-        lookPos.y = 0f; // keep rotation horizontal
+        Vector3 toPlayer = player.position - rb.position;
+        Vector3 flatDir = new Vector3(toPlayer.x, 0f, toPlayer.z);
+        float dist = flatDir.magnitude;
 
-        if (lookPos.sqrMagnitude > 0.01f)
+        // rotation
+        if (flatDir.sqrMagnitude > 0.01f)
         {
-            Quaternion targetRot = Quaternion.LookRotation(lookPos)
-                                  * Quaternion.Euler(0, modelRotationOffset, 0);
+            Quaternion targetRot = Quaternion.LookRotation(flatDir.normalized)
+                                   * Quaternion.Euler(0, modelRotationOffset, 0);
 
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotationSpeed * Time.deltaTime);
+            rb.MoveRotation(
+                Quaternion.Slerp(rb.rotation, targetRot, rotationSpeed * Time.fixedDeltaTime)
+            );
         }
 
-        // move towards player
-        if (horizontalDist > stopDistance)
-        {
-            Vector3 moveDir = new Vector3(lookPos.x, 0f, lookPos.z).normalized;
-            transform.position += moveDir * moveSpeed * Time.deltaTime;
-        }
+        // movement
+        Vector3 newPos = rb.position;
 
-        // hover based on player height
-        float targetY = player.position.y + heightOffset;
+        if (dist > stopDistance)
+            newPos += flatDir.normalized * moveSpeed * Time.fixedDeltaTime;
+
+        // hover
+        float heightTarget = player.position.y + heightOffset;
         float hover = Mathf.Sin(Time.time * hoverFrequency) * hoverAmplitude;
 
-        Vector3 pos = transform.position;
-        pos.y = Mathf.Lerp(pos.y, targetY, Time.deltaTime * 0.5f) + hover;
-        transform.position = pos;
+        newPos.y = Mathf.Lerp(rb.position.y, heightTarget, Time.fixedDeltaTime * 0.5f) + hover;
+
+        rb.MovePosition(newPos);
     }
 }

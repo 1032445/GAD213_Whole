@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class PlayerHealth : MonoBehaviour
 {
@@ -169,8 +170,11 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
-    void Die()
+    public void Die()
     {
-        Debug.Log("PLAYER DIED");
+        Debug.Log("DIED");
+
+        Scene active = SceneManager.GetActiveScene();
+        SceneManager.LoadScene(active.name);
     }
 }
