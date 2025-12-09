@@ -11,14 +11,6 @@ public class PlayerController : MonoBehaviour
     public float lowJumpMultiplier = 2f;
     public float jumpGravityMultiplier = 1f;
 
-    [Header("Crouching")]
-    public float crouchHeight = 1.5f;
-    public float standHeight = 2f;
-    public float crouchMoveSpeed = 2.5f;
-    public KeyCode crouchKey = KeyCode.LeftControl;
-    private bool isCrouching = false;
-    private CapsuleCollider capsuleCollider;
-
     [Header("Sprinting")]
     public float sprintSpeed = 10f;
     public KeyCode sprintKey = KeyCode.LeftShift;
@@ -26,14 +18,32 @@ public class PlayerController : MonoBehaviour
     [Header("Camera")]
     public Transform cameraTransform;
     public float mouseSensitivity = 500f;
+    private float xRotation = 0f;
+
+    [Header("Crouching")]
+    public KeyCode crouchKey = KeyCode.LeftControl;
+
+    private float standCameraHeight;
+    public float crouchCameraHeight = 0.5f;
+
+    public float standColliderCenter = 1f;
+    public float crouchColliderCenter = 0.5f;
+
+    public float crouchTransitionSpeed = 8f;
+    private bool isCrouching = false;
+    private CapsuleCollider capsule;
+
+    public float standColliderHeight = 2f;
+    public float crouchColliderHeight = 1.0f;
 
     [Header("Pickup")]
     public Transform holdPoint;
     public float holdDistance = 2f;
     public float holdSmooth = 10f;
     public float pickupRange = 3f;
-    public LayerMask pickupLayer;
     public KeyCode pickupKey = KeyCode.E;
+    public LayerMask pickupLayer;
+
     public Rigidbody heldObject;
     public Hint pickupHint;
 
@@ -43,25 +53,36 @@ public class PlayerController : MonoBehaviour
     public LayerMask groundMask;
 
     private Rigidbody rb;
-    private float xRotation = 0f;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        capsuleCollider = GetComponent<CapsuleCollider>();
+        capsule = GetComponent<CapsuleCollider>();
+
+        capsule.height = standColliderHeight;
+        capsule.center = new Vector3(0, standColliderHeight / 2f, 0);
+
+        standColliderCenter = capsule.center.y;
+        standCameraHeight = cameraTransform.localPosition.y;
 
         Cursor.lockState = CursorLockMode.Locked;
-
-        isCrouching = false;
-        capsuleCollider.height = standHeight;
-
-        cameraTransform.localPosition = new Vector3(cameraTransform.localPosition.x, standHeight * 0.5f, cameraTransform.localPosition.z);
     }
 
     void Update()
     {
-        if (Time.time < 0.1f)
-            return; // ignore camera look on first frame
+        if (Time.time < 0.05f)
+            return;
+
+        HandleLook();
+        HandleMovement();
+        HandleJumpGravity();
+        HandleCrouch();
+        HandlePickup();
+    }
+
+    // camera look
+    void HandleLook()
+    {
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
@@ -70,58 +91,104 @@ public class PlayerController : MonoBehaviour
 
         cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         transform.Rotate(Vector3.up * mouseX);
+    }
 
-
-
-
+    // movement
+    void HandleMovement()
+    {
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
 
-
-        float currentSpeed = isCrouching ? crouchMoveSpeed :
-                            (Input.GetKey(sprintKey) ? sprintSpeed : speed);
+        float currentSpeed =
+            isCrouching ? speed * 0.5f :
+            (Input.GetKey(sprintKey) ? sprintSpeed : speed);
 
         Vector3 move = transform.forward * vertical + transform.right * horizontal;
         Vector3 velocity = move * currentSpeed;
         velocity.y = rb.velocity.y;
         rb.velocity = velocity;
 
-
         if (Input.GetButtonDown("Jump") && IsGrounded())
         {
             rb.velocity = new Vector3(rb.velocity.x, jumpForce, rb.velocity.z);
         }
+    }
 
-        if (rb.velocity.y > 0) // Going up
+    // jump settings
+    void HandleJumpGravity()
+    {
+        if (rb.velocity.y > 0) // jumping
         {
             rb.velocity += Vector3.up * Physics.gravity.y * (jumpGravityMultiplier - 1) * Time.deltaTime;
 
             if (!Input.GetButton("Jump"))
-            {
                 rb.velocity += Vector3.up * Physics.gravity.y * (lowJumpMultiplier - 1) * Time.deltaTime;
-            }
         }
-        else if (rb.velocity.y < 0) // Falling
+        else if (rb.velocity.y < 0) // falling
         {
             rb.velocity += Vector3.up * Physics.gravity.y * (fallMultiplier - 1) * Time.deltaTime;
         }
+    }
 
+    // crouching
+    void HandleCrouch()
+    {
+        bool crouchHeld = Input.GetKey(crouchKey);
 
-        if (Input.GetKeyDown(crouchKey))
+        if (crouchHeld)
         {
             isCrouching = true;
-            capsuleCollider.height = crouchHeight;
-            cameraTransform.localPosition = new Vector3(cameraTransform.localPosition.x, crouchHeight * 0.5f, cameraTransform.localPosition.z);
         }
-        else if (Input.GetKeyUp(crouchKey))
+        else
         {
-            Ray ray = new Ray(transform.position, Vector3.up);
-            if (!Physics.Raycast(ray, standHeight))
-            {
+            // only stand if space above is clear
+            if (CanStandUp())
                 isCrouching = false;
-                capsuleCollider.height = standHeight;
-                cameraTransform.localPosition = new Vector3(cameraTransform.localPosition.x, standHeight * 0.5f, cameraTransform.localPosition.z);
+        }
+
+        // collider height change
+        capsule.height = isCrouching ? crouchColliderHeight : standColliderHeight;
+        capsule.center = new Vector3(0, capsule.height / 2f, 0);
+
+        // smooth camera movement
+        float targetCamY = isCrouching ? crouchCameraHeight : standCameraHeight;
+        Vector3 camPos = cameraTransform.localPosition;
+        camPos.y = Mathf.Lerp(camPos.y, targetCamY, Time.deltaTime * crouchTransitionSpeed);
+        cameraTransform.localPosition = camPos;
+    }
+
+
+    // checks if space to stand
+    bool CanStandUp()
+    {
+        float radius = capsule.radius * 0.9f;
+        float standHeight = standColliderHeight;
+
+        Vector3 bottom = transform.position + Vector3.up * radius;
+        Vector3 top = transform.position + Vector3.up * (standHeight - radius);
+
+        return !Physics.CheckCapsule(bottom, top, radius, groundMask,
+            QueryTriggerInteraction.Ignore);
+    }
+
+    // pick ups
+    void HandlePickup()
+    {
+        // hint raycast
+        if (holdPoint != null)
+        {
+            Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+            if (Physics.Raycast(ray, out RaycastHit hit, pickupRange))
+            {
+                if (hit.collider.CompareTag("Pickup") && heldObject == null)
+                    pickupHint?.Show("Press E to pick up");
+                else if (heldObject != null)
+                    pickupHint?.Show("Press E to drop");
+                else
+                    pickupHint?.Hide();
             }
+            else
+                pickupHint?.Hide();
         }
 
         if (Input.GetKeyDown(pickupKey))
@@ -129,25 +196,26 @@ public class PlayerController : MonoBehaviour
             if (heldObject != null)
                 Drop();
             else
-                Pickup();
+                TryPickup();
         }
 
+        // held object
         if (heldObject != null)
         {
-            Vector3 targetPosition = cameraTransform.position + cameraTransform.forward * holdDistance;
-            heldObject.position = Vector3.Lerp(heldObject.position, targetPosition, holdSmooth * Time.deltaTime);
+            Vector3 targetPosition =
+                cameraTransform.position + cameraTransform.forward * holdDistance;
+
+            heldObject.position =
+                Vector3.Lerp(heldObject.position, targetPosition, holdSmooth * Time.deltaTime);
+
             heldObject.rotation = Quaternion.identity;
         }
     }
 
-    bool IsGrounded()
-    {
-        return Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
-    }
-
-    void Pickup()
+    void TryPickup()
     {
         Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+
         if (Physics.Raycast(ray, out RaycastHit hit, pickupRange))
         {
             if (hit.collider.CompareTag("Pickup"))
@@ -171,5 +239,11 @@ public class PlayerController : MonoBehaviour
             heldObject.constraints = RigidbodyConstraints.None;
             heldObject = null;
         }
+    }
+
+    // ground check
+    bool IsGrounded()
+    {
+        return Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
     }
 }
