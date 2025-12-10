@@ -150,7 +150,7 @@ MonoBehaviour:
   player: {fileID: 0}
   moveSpeed: 5
   rotationSpeed: 8
-  stopDistance: 1.2
+  stopDistance: 0.3
   hoverAmplitude: 0.01
   hoverFrequency: 3
   heightOffset: 0.5
