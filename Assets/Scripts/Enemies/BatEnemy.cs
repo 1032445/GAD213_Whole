@@ -5,14 +5,18 @@ using UnityEngine;
 public class BatEnemy : MonoBehaviour
 {
     public Transform player;
+
+    [Header("Movement")]
     public float moveSpeed = 2f;
     public float rotationSpeed = 6f;
     public float stopDistance = 1.5f;
 
+    [Header("Hovering")]
     public float hoverAmplitude = 0.25f;
     public float hoverFrequency = 3f;
     public float heightOffset = 0.5f;
 
+    [Header("Model Offset")]
     public float modelRotationOffset = 0f;
 
     private Rigidbody rb;
@@ -28,14 +32,15 @@ public class BatEnemy : MonoBehaviour
             return;
 
         Vector3 toPlayer = player.position - rb.position;
-        Vector3 flatDir = new Vector3(toPlayer.x, 0f, toPlayer.z);
-        float dist = flatDir.magnitude;
 
-        // rotation
+        float fullDist = toPlayer.magnitude;
+
+        Vector3 flatDir = new Vector3(toPlayer.x, 0f, toPlayer.z);
+
         if (flatDir.sqrMagnitude > 0.01f)
         {
             Quaternion targetRot = Quaternion.LookRotation(flatDir.normalized)
-                                   * Quaternion.Euler(0, modelRotationOffset, 0);
+                               * Quaternion.Euler(0, modelRotationOffset, 0);
 
             rb.MoveRotation(
                 Quaternion.Slerp(rb.rotation, targetRot, rotationSpeed * Time.fixedDeltaTime)
@@ -45,15 +50,33 @@ public class BatEnemy : MonoBehaviour
         // movement
         Vector3 newPos = rb.position;
 
-        if (dist > stopDistance)
-            newPos += flatDir.normalized * moveSpeed * Time.fixedDeltaTime;
+        if (fullDist > stopDistance)
+        {
+            newPos += toPlayer.normalized * moveSpeed * Time.fixedDeltaTime;
+        }
 
-        // hover
-        float heightTarget = player.position.y + heightOffset;
+        // hover & descent
+        bool closeToPlayer = fullDist < stopDistance + 0.3f;
+
+        float targetY;
+
+        if (closeToPlayer)
+        {
+            // move to player height directly
+            targetY = player.position.y + 0.2f;
+        }
+        else
+        {
+            // normal hover above player head
+            targetY = player.position.y + heightOffset;
+        }
+
+        // hover wobble
         float hover = Mathf.Sin(Time.time * hoverFrequency) * hoverAmplitude;
 
-        newPos.y = Mathf.Lerp(rb.position.y, heightTarget, Time.fixedDeltaTime * 0.5f) + hover;
+        Vector3 pos = newPos;
+        pos.y = Mathf.Lerp(rb.position.y, targetY, Time.fixedDeltaTime * 6f) + hover;
 
-        rb.MovePosition(newPos);
+        rb.MovePosition(pos);
     }
 }
