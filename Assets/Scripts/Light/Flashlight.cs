@@ -60,6 +60,13 @@ public class Flashlight : MonoBehaviour
     public float killFlickerIntensity = 0.5f;
     public bool killImmediately = true;
 
+    [Header("UI Flicker")]
+    public Image batteryFillImage;
+    public Color normalColor = Color.yellow;
+    public Color combatColor = Color.white;
+    public float uiFlickerSpeed = 10f;
+    public float uiFlickerAmount = 0.3f;
+
     void Start()
     {
         currentBattery = maxBattery;
@@ -87,6 +94,7 @@ public class Flashlight : MonoBehaviour
 
         if (batterySlider != null)
             batterySlider.value = BatteryPercent();
+        HandleUIFlicker();
     }
 
     // toggle
@@ -121,11 +129,6 @@ public class Flashlight : MonoBehaviour
         float drainRate = isDealingDamage ? combatDrainRate : idleDrainRate;
 
         currentBattery -= drainRate * Time.deltaTime;
-
-        // enforce minimum brightness if hasnt hit kill trigger
-        float criticalMin = maxBattery * criticalBatteryPercent;
-        if (currentBattery < criticalMin)
-            currentBattery = criticalMin;
     }
 
     public float BatteryPercent()
@@ -306,5 +309,22 @@ public class Flashlight : MonoBehaviour
         // now fully off
         flashlightLight.enabled = false;
         isOn = false;
+    }
+
+    void HandleUIFlicker()
+    {
+        if (batteryFillImage == null) return;
+
+        if (isDealingDamage)
+        {
+            // flicker between two colors
+            float t = (Mathf.Sin(Time.time * uiFlickerSpeed) + 1f) / 2f;
+            batteryFillImage.color = Color.Lerp(normalColor, combatColor, t * uiFlickerAmount);
+        }
+        else
+        {
+            // smoothly return to normal color
+            batteryFillImage.color = Color.Lerp(batteryFillImage.color, normalColor, Time.deltaTime * 5f);
+        }
     }
 }
