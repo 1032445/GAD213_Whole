@@ -54,7 +54,6 @@ public class TimedLever : MonoBehaviour
                 DeactivateLever();
         }
 
-        // smooth animate
         Quaternion targetRot = isActive ? onRotation : startRotation;
 
         pivotPoint.localRotation = Quaternion.Lerp(
@@ -72,11 +71,9 @@ public class TimedLever : MonoBehaviour
         if (bridgeMover != null)
             bridgeMover.isActive = true;
 
-        // start ticking
         if (tickingSource != null && !tickingSource.isPlaying)
             tickingSource.Play();
 
-        // play activation sound
         if (sfxSource != null && activationClip != null)
             sfxSource.PlayOneShot(activationClip);
     }
@@ -88,11 +85,9 @@ public class TimedLever : MonoBehaviour
         if (bridgeMover != null)
             bridgeMover.isActive = false;
 
-        // stop ticking
         if (tickingSource != null && tickingSource.isPlaying)
             tickingSource.Stop();
 
-        // play deactivation sound
         if (sfxSource != null && deactivationClip != null)
             sfxSource.PlayOneShot(deactivationClip);
     }

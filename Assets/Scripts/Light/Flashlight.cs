@@ -12,6 +12,7 @@ public class Flashlight : MonoBehaviour
     public bool isOn = false;
     private float currentBattery;
     public Slider batterySlider;
+    private bool isKilled = false;
 
     [Header("Drain Rates")]
     public float idleDrainRate = 0.1f;
@@ -53,6 +54,12 @@ public class Flashlight : MonoBehaviour
     public float lowConeMultiplier = 0.7f;
     public float criticalConeMultiplier = 0.3f;
 
+    [Header("Forced Kill Settings")]
+    public float killShakeAmount = 0.1f;
+    public float killShakeDuration = 0.25f;
+    public float killFlickerIntensity = 0.5f;
+    public bool killImmediately = true;
+
     void Start()
     {
         currentBattery = maxBattery;
@@ -85,6 +92,8 @@ public class Flashlight : MonoBehaviour
     // toggle
     void HandleToggle()
     {
+        if (isKilled) return;
+
         if (Input.GetKeyDown(toggleKey) && currentBattery > 0)
         {
             isOn = !isOn;
@@ -102,13 +111,18 @@ public class Flashlight : MonoBehaviour
     // battery drain
     void HandleBatteryDrain()
     {
-        if (!isOn) return;
+        // if flashlight killed, keep off
+        if (isKilled)
+            return;
+
+        if (!isOn)
+            return;
 
         float drainRate = isDealingDamage ? combatDrainRate : idleDrainRate;
 
         currentBattery -= drainRate * Time.deltaTime;
 
-        // enforce minimum brightness
+        // enforce minimum brightness if hasnt hit kill trigger
         float criticalMin = maxBattery * criticalBatteryPercent;
         if (currentBattery < criticalMin)
             currentBattery = criticalMin;
@@ -257,5 +271,40 @@ public class Flashlight : MonoBehaviour
             originalConeAngle * criticalConeMultiplier,
             Time.deltaTime * 5f
         );
+    }
+
+    public void KillFlashlight()
+    {
+        isKilled = true;
+
+        // force battery to 0
+        currentBattery = 0f;
+
+        // apply shake
+        shakeAmount = killShakeAmount;
+        shakeTimer = killShakeDuration;
+
+        // custom flicker strength
+        flickerPercent = killFlickerIntensity;
+        flicker = true;
+
+        // flicker before turning off
+        StartCoroutine(FlickerThenDie());
+    }
+
+    private IEnumerator FlickerThenDie()
+    {
+        // flicker a few times
+        for (int i = 0; i < 3; i++)
+        {
+            flashlightLight.enabled = false;
+            yield return new WaitForSeconds(0.05f);
+            flashlightLight.enabled = true;
+            yield return new WaitForSeconds(0.05f);
+        }
+
+        // now fully off
+        flashlightLight.enabled = false;
+        isOn = false;
     }
 }

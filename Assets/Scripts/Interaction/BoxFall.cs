@@ -9,7 +9,7 @@ public class BoxFall : MonoBehaviour
     public Vector3 pushForce = new Vector3(0, -3f, 0);
 
     [Header("Rotation Settings")]
-    public Vector3 torqueForce = new Vector3(80f, 0f, 0f);   // X axis = forward tip
+    public Vector3 torqueForce = new Vector3(80f, 0f, 0f);
 
     [Header("Audio")]
     public AudioSource audioSource;

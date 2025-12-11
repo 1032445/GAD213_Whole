@@ -4,44 +4,46 @@ using UnityEngine;
 
 public class LightEnemy : MonoBehaviour
 {
+    [Header("Health")]
     public float maxHealth = 3f;
-    float currentHealth;
+    private float currentHealth;
+    private bool isDead = false;
 
     [Header("References")]
     private BatAudio audioHandler;
     private BatEnemy batEnemy;
+    private Rigidbody rb;
 
-    [Header("Knockback")]
-    public float knockbackStrength = 2f;
-    public float knockbackDuration = 0.1f;
+    [Header("Knockback Settings")]
+    public float knockbackForce = 4f;
+    public float maxKnockbackSpeed = 5f;
 
-    private float knockbackTimer = 0f;
-    private Vector3 knockbackDirection;
-    private bool isDead = false;
 
     void Start()
     {
         currentHealth = maxHealth;
+
         audioHandler = GetComponent<BatAudio>();
         batEnemy = GetComponent<BatEnemy>();
+        rb = GetComponent<Rigidbody>();
+
+        if (rb == null)
+            Debug.LogError("LightEnemy requires a Rigidbody!");
     }
 
-    void Update()
+    void FixedUpdate()
     {
-        // apply knockback if active
-        if (knockbackTimer > 0f)
+        // clamp knockback speed
+        if (rb.velocity.magnitude > maxKnockbackSpeed)
         {
-            knockbackTimer -= Time.deltaTime;
-
-            // move opposite of player direction
-            transform.position += knockbackDirection * knockbackStrength * Time.deltaTime;
+            rb.velocity = rb.velocity.normalized * maxKnockbackSpeed;
         }
     }
 
     public void TakeLightDamage(float amount)
     {
         if (isDead)
-            return; // prevent hit sounds + knockback after death
+            return;
 
         currentHealth -= amount;
 
@@ -56,20 +58,26 @@ public class LightEnemy : MonoBehaviour
 
     void ApplyKnockback()
     {
-        if (batEnemy == null || batEnemy.player == null)
+        if (batEnemy == null || batEnemy.player == null || rb == null)
             return;
 
-        // direction away from player
+        // direction away from the player
         Vector3 dir = transform.position - batEnemy.player.position;
-        dir.y = 0; // keep horizontal
+        dir.y = 0f;
+        dir = dir.normalized;
 
-        knockbackDirection = dir.normalized;
-        knockbackTimer = knockbackDuration;
+        // knockback burst
+        rb.AddForce(dir * knockbackForce, ForceMode.VelocityChange);
     }
+
 
     void Die()
     {
         isDead = true;
+
+        // stop movement logic
+        if (batEnemy != null)
+            batEnemy.enabled = false;
 
         if (audioHandler != null && audioHandler.deathClip != null)
             audioHandler.PlayDeath();

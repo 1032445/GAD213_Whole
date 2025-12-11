@@ -168,8 +168,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 4
-  knockbackStrength: 4
-  knockbackDuration: 0.05
+  knockbackForce: 0.2
+  maxKnockbackSpeed: 3
 --- !u!114 &4920457884340250551
 MonoBehaviour:
   m_ObjectHideFlags: 0
