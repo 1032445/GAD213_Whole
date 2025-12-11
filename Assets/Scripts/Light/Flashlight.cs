@@ -5,6 +5,8 @@ using UnityEngine.UI;
 
 public class Flashlight : MonoBehaviour
 {
+    public LayerMask wallMask;
+
     [Header("Flashlight Basics")]
     public Light flashlightLight;
     public KeyCode toggleKey = KeyCode.F;
@@ -139,7 +141,7 @@ public class Flashlight : MonoBehaviour
     // damage & hit feedback
     public void ApplyLightDamage()
     {
-        isDealingDamage = false; // reset
+        isDealingDamage = false;
 
         Collider[] hits = Physics.OverlapSphere(transform.position, range);
 
@@ -150,14 +152,24 @@ public class Flashlight : MonoBehaviour
                 Vector3 dir = (hit.transform.position - transform.position).normalized;
                 float dot = Vector3.Dot(transform.forward, dir);
 
+                // must be inside light cone
                 if (dot > Mathf.Cos(angle * Mathf.Deg2Rad))
                 {
-                    // damaging enemy
-                    isDealingDamage = true;
+                    // wall check
+                    if (Physics.Raycast(transform.position, dir, out RaycastHit rh, range, wallMask))
+                    {
+                        // block if wall in between
+                        float wallDist = Vector3.Distance(transform.position, rh.point);
+                        float batDist = Vector3.Distance(transform.position, hit.transform.position);
 
+                        if (wallDist < batDist)
+                            continue; // wall is in the way
+                    }
+
+                    // apply damage
+                    isDealingDamage = true;
                     enemy.TakeLightDamage(damagePerSecond * Time.deltaTime);
 
-                    // hit feedback
                     shakeTimer = 0.1f;
                     flicker = true;
                 }

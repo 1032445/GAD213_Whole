@@ -33,8 +33,12 @@ public class PlayerHealth : MonoBehaviour
     public float lowHealthVolume = 0.8f;
     private bool lowHealthActive = false;
 
+    [Header("Death UI")]
+    public GameObject deathPanel;
+
     private Rigidbody rb;
     private Transform cam;
+    private PlayerController controller;
 
     private float shakeTimer = 0f;
     private Vector3 originalCamPos;
@@ -43,6 +47,7 @@ public class PlayerHealth : MonoBehaviour
     {
         currentHealth = maxHealth;
 
+        controller = GetComponent<PlayerController>();
         rb = GetComponent<Rigidbody>();
         cam = GetComponentInChildren<Camera>().transform;
         originalCamPos = cam.localPosition;
@@ -170,11 +175,31 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
+    public void TryHit(float amount, Vector3 attackerPosition)
+    {
+        if (damageTimer > 0f)
+            return;
+
+        TakeDamage(amount, attackerPosition);
+    }
+
     public void Die()
     {
         Debug.Log("DIED");
 
-        Scene active = SceneManager.GetActiveScene();
-        SceneManager.LoadScene(active.name);
+        // freeze movement
+        if (controller != null)
+            controller.enabled = false;
+
+        // unlock + show cursor
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        // pause game
+        Time.timeScale = 0f;
+
+        // show death UI
+        if (deathPanel != null)
+            deathPanel.SetActive(true);
     }
 }

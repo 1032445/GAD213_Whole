@@ -34,7 +34,7 @@ public class EnemyDamage : MonoBehaviour
         if (dist <= attackRange && attackTimer <= 0f)
         {
             // knockback using attacker position
-            playerHealth.TakeDamage(damage, transform.position);
+            playerHealth.TryHit(damage, transform.position);
             attackTimer = attackCooldown;
         }
     }
