@@ -1613,7 +1613,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -696, y: -381}
+  m_AnchoredPosition: {x: -696, y: -354}
   m_SizeDelta: {x: 1500, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2092027948
@@ -1640,8 +1640,10 @@ MonoBehaviour:
 
     Interact with objects - E
 
-    Sprint - Left
-    Shift
+    Jump - Spacebar
+
+    Sprint
+    - Left Shift
 
     Crouch - Left Control'
   m_isRightToLeft: 0
